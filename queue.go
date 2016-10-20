@@ -14,6 +14,7 @@ type AliMNSQueue interface {
 	BatchSendMessage(messages ...MessageSendRequest) (resp BatchMessageSendResponse, err error)
 	ReceiveMessage(respChan chan MessageReceiveResponse, errChan chan error, waitseconds ...int64)
 	BatchReceiveMessage(respChan chan BatchMessageReceiveResponse, errChan chan error, numOfMessages int32, waitseconds ...int64)
+	BatchReceiveMsg(numOfMessages int32, waitseconds ...int64) (respChan BatchMessageReceiveResponse, errChan error)
 	PeekMessage(respChan chan MessageReceiveResponse, errChan chan error)
 	BatchPeekMessage(respChan chan BatchMessageReceiveResponse, errChan chan error, numOfMessages int32)
 	DeleteMessage(receiptHandle string) (err error)
@@ -22,9 +23,9 @@ type AliMNSQueue interface {
 }
 
 type MNSQueue struct {
-	name          string
-	client        MNSClient
-	decoder       MNSDecoder
+	name    string
+	client  MNSClient
+	decoder MNSDecoder
 
 	qpsMonitor *QPSMonitor
 }
@@ -107,6 +108,19 @@ func (p *MNSQueue) BatchReceiveMessage(respChan chan BatchMessageReceiveResponse
 	} else {
 		respChan <- resp
 	}
+	return
+}
+
+func (p *MNSQueue) BatchReceiveMsg(numOfMessages int32, waitseconds ...int64) (resp BatchMessageReceiveResponse, err error) {
+	if numOfMessages <= 0 {
+		numOfMessages = DefaultNumOfMessages
+	}
+
+	resource := fmt.Sprintf("queues/%s/%s?numOfMessages=%d", p.name, "messages", numOfMessages)
+	if waitseconds != nil && len(waitseconds) == 1 && waitseconds[0] >= 0 {
+		resource = fmt.Sprintf("queues/%s/%s?numOfMessages=%d&waitseconds=%d", p.name, "messages", numOfMessages, waitseconds[0])
+	}
+	_, err = send(p.client, p.decoder, GET, nil, nil, resource, &resp)
 	return
 }
 
