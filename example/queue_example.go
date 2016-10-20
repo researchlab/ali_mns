@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"fmt"
+	"io/ioutil"
 
-	"github.com/souriki/ali_mns"
 	"github.com/gogap/logs"
+	"github.com/researchlab/ali_mns"
 )
 
 type appConf struct {
@@ -34,7 +34,6 @@ func main() {
 		MessageBody:  "hello <\"souriki/ali_mns\">",
 		DelaySeconds: 0,
 		Priority:     8}
-
 
 	queueManager := ali_mns.NewMNSQueueManager(client)
 	err := queueManager.CreateSimpleQueue("test")
