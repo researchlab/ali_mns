@@ -98,7 +98,7 @@ func (p *MNSQueue) ReceiveMsg(waitseconds ...int64) (resp MessageReceiveResponse
 	}
 
 	p.qpsMonitor.checkQPS()
-	_, err := send(p.client, p.decoder, GET, nil, nil, resource, &resp)
+	_, err = send(p.client, p.decoder, GET, nil, nil, resource, &resp)
 	return
 }
 
