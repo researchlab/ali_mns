@@ -13,8 +13,9 @@ type AliMNSQueue interface {
 	SendMessage(message MessageSendRequest) (resp MessageSendResponse, err error)
 	BatchSendMessage(messages ...MessageSendRequest) (resp BatchMessageSendResponse, err error)
 	ReceiveMessage(respChan chan MessageReceiveResponse, errChan chan error, waitseconds ...int64)
+	ReceiveMsg(waitseconds ...int64) (resp MessageReceiveResponse, err error)
 	BatchReceiveMessage(respChan chan BatchMessageReceiveResponse, errChan chan error, numOfMessages int32, waitseconds ...int64)
-	BatchReceiveMsg(numOfMessages int32, waitseconds ...int64) (respChan BatchMessageReceiveResponse, errChan error)
+	BatchReceiveMsg(numOfMessages int32, waitseconds ...int64) (resp BatchMessageReceiveResponse, err error)
 	PeekMessage(respChan chan MessageReceiveResponse, errChan chan error)
 	BatchPeekMessage(respChan chan BatchMessageReceiveResponse, errChan chan error, numOfMessages int32)
 	DeleteMessage(receiptHandle string) (err error)
@@ -90,6 +91,17 @@ func (p *MNSQueue) ReceiveMessage(respChan chan MessageReceiveResponse, errChan 
 	return
 }
 
+func (p *MNSQueue) ReceiveMsg(waitseconds ...int64) (resp MessageReceiveResponse, err error) {
+	resource := fmt.Sprintf("queues/%s/%s", p.name, "messages")
+	if waitseconds != nil && len(waitseconds) == 1 && waitseconds[0] >= 0 {
+		resource = fmt.Sprintf("queues/%s/%s?waitseconds=%d", p.name, "messages", waitseconds[0])
+	}
+
+	p.qpsMonitor.checkQPS()
+	_, err := send(p.client, p.decoder, GET, nil, nil, resource, &resp)
+	return
+}
+
 func (p *MNSQueue) BatchReceiveMessage(respChan chan BatchMessageReceiveResponse, errChan chan error, numOfMessages int32, waitseconds ...int64) {
 	if numOfMessages <= 0 {
 		numOfMessages = DefaultNumOfMessages
@@ -120,6 +132,8 @@ func (p *MNSQueue) BatchReceiveMsg(numOfMessages int32, waitseconds ...int64) (r
 	if waitseconds != nil && len(waitseconds) == 1 && waitseconds[0] >= 0 {
 		resource = fmt.Sprintf("queues/%s/%s?numOfMessages=%d&waitseconds=%d", p.name, "messages", numOfMessages, waitseconds[0])
 	}
+
+	p.qpsMonitor.checkQPS()
 	_, err = send(p.client, p.decoder, GET, nil, nil, resource, &resp)
 	return
 }
